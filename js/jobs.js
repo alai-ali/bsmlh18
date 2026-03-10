@@ -4,11 +4,15 @@ var currentJobId = null;
 var currentRole = null; // 'employer' или 'worker'
 
 function initJobsDB() {
-  if (!window.firebase || !firebase.apps.length) {
-    setTimeout(initJobsDB, 500); return;
+  if (!window.firebase || !firebase.apps || !firebase.apps.length) {
+    setTimeout(initJobsDB, 800); return;
   }
-  jobsDB = firebase.database().ref('jobs');
-  loadJobs();
+  try {
+    jobsDB = firebase.database().ref('jobs');
+    console.log('JobsDB ready');
+  } catch(e) {
+    setTimeout(initJobsDB, 800); return;
+  }
 }
 
 // РОЛЬ
