@@ -303,28 +303,96 @@
 <div id="pg-jobs" class="pg">
   <div class="pg-head">
     <button class="pg-back" onclick="closePg('pg-jobs')"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
-    <span class="pg-head-title">Биржа труда</span>
+    <span class="pg-head-title">🤝 Биржа труда</span>
   </div>
   <div class="pg-body">
-    <div style="display:flex;gap:8px;margin-bottom:16px;">
-      <button class="btn" style="flex:1;padding:10px;font-size:13px;" onclick="showJobTab('vacancies')">Вакансии</button>
-      <button class="btn-ghost" style="flex:1;padding:10px;font-size:13px;" onclick="showJobTab('post')">Разместить</button>
+
+    <!-- Выбор роли -->
+    <div id="jobs-role">
+      <div style="text-align:center;padding:16px 0 24px;">
+        <div style="font-size:22px;font-weight:900;color:var(--text);margin-bottom:8px;">Кто вы?</div>
+        <div style="font-size:14px;color:var(--text2);">Выберите роль для продолжения</div>
+      </div>
+      <div onclick="selectRole('employer')" style="background:var(--green);border-radius:20px;padding:24px;margin-bottom:12px;cursor:pointer;display:flex;align-items:center;gap:16px;">
+        <div style="font-size:40px;">👔</div>
+        <div><div style="font-size:18px;font-weight:900;color:white;">Работодатель</div><div style="font-size:13px;color:rgba(255,255,255,0.8);">Разместить заказ, выбрать исполнителя</div></div>
+      </div>
+      <div onclick="selectRole('worker')" style="background:white;border-radius:20px;padding:24px;cursor:pointer;display:flex;align-items:center;gap:16px;border:2px solid var(--border);">
+        <div style="font-size:40px;">🧑‍💼</div>
+        <div><div style="font-size:18px;font-weight:900;color:var(--text);">Работник</div><div style="font-size:13px;color:var(--text2);">Найти заказ и откликнуться</div></div>
+      </div>
     </div>
-    <div id="job-vacancies">
-      <div class="section-title">Открытые вакансии</div>
-      <div class="job-item"><div class="job-company">TechKZ</div><div class="job-title">Frontend разработчик</div><div class="job-tags"><span class="job-tag">React</span><span class="job-tag">Remote</span><span class="job-tag">500K₸</span></div><button class="btn" style="margin-top:10px;padding:10px;font-size:13px;" onclick="applyJob(this,'Frontend разработчик')">Откликнуться</button></div>
-      <div class="job-item"><div class="job-company">BSMLH Hub</div><div class="job-title">NFC-специалист</div><div class="job-tags"><span class="job-tag">NFC</span><span class="job-tag">Алматы</span><span class="job-tag">400K₸</span></div><button class="btn" style="margin-top:10px;padding:10px;font-size:13px;" onclick="applyJob(this,'NFC-специалист')">Откликнуться</button></div>
-      <div class="job-item"><div class="job-company">InvestKZ</div><div class="job-title">Финансовый аналитик</div><div class="job-tags"><span class="job-tag">Финансы</span><span class="job-tag">Hybrid</span><span class="job-tag">600K₸</span></div><button class="btn" style="margin-top:10px;padding:10px;font-size:13px;" onclick="applyJob(this,'Финансовый аналитик')">Откликнуться</button></div>
-      <div class="job-item"><div class="job-company">StartupAlmaty</div><div class="job-title">Product Manager</div><div class="job-tags"><span class="job-tag">PM</span><span class="job-tag">Remote</span><span class="job-tag">700K₸</span></div><button class="btn" style="margin-top:10px;padding:10px;font-size:13px;" onclick="applyJob(this,'Product Manager')">Откликнуться</button></div>
+
+    <!-- Работодатель -->
+    <div id="jobs-employer" style="display:none;">
+      <div id="jobs-employer-home">
+        <button class="btn" onclick="showPostJob()">+ Разместить заказ</button>
+        <div class="section-title">Мои заказы</div>
+        <div id="my-jobs-list"><div style="text-align:center;padding:20px;color:var(--text2);font-size:13px;">Нет активных заказов</div></div>
+        <button class="btn-ghost" onclick="el('jobs-employer').style.display='none';el('jobs-role').style.display='block';">← Сменить роль</button>
+      </div>
+      <!-- Выбор категории -->
+      <div id="jobs-cat-select" style="display:none;">
+        <div style="font-size:17px;font-weight:700;margin-bottom:16px;">Выберите категорию</div>
+        <div id="jobs-cat-list"></div>
+        <button class="btn-ghost" onclick="el('jobs-cat-select').style.display='none';el('jobs-employer-home').style.display='block';">← Назад</button>
+      </div>
+      <!-- Форма заказа -->
+      <div id="jobs-post-form" style="display:none;">
+        <div style="font-size:17px;font-weight:700;margin-bottom:4px;">Новый заказ</div>
+        <div id="jobs-post-cat-label" style="font-size:13px;color:var(--green);font-weight:600;margin-bottom:16px;"></div>
+        <input class="inp" id="jp-title" placeholder="Название заказа">
+        <textarea class="inp" id="jp-desc" placeholder="Подробное описание задания..." rows="4" style="resize:none;"></textarea>
+        <input class="inp" id="jp-price" placeholder="Оплата (напр. 15 000₸)">
+        <input class="inp" id="jp-location" placeholder="Местоположение (или Удалённо)">
+        <button class="btn" onclick="postNewJob()">📢 Опубликовать заказ</button>
+        <button class="btn-ghost" onclick="el('jobs-post-form').style.display='none';el('jobs-employer-home').style.display='block';">← Назад</button>
+      </div>
     </div>
-    <div id="job-post" style="display:none;">
-      <div class="section-title">Разместить вакансию</div>
-      <input class="inp" id="job-post-title" placeholder="Название вакансии">
-      <input class="inp" id="job-post-company" placeholder="Компания">
-      <input class="inp" id="job-post-salary" placeholder="Зарплата (напр. 500K₸)">
-      <textarea class="inp" id="job-post-desc" placeholder="Описание вакансии" rows="4" style="resize:none;"></textarea>
-      <button class="btn" onclick="postJob()">Опубликовать</button>
+
+    <!-- Работник -->
+    <div id="jobs-worker" style="display:none;">
+      <div style="overflow-x:auto;white-space:nowrap;margin-bottom:16px;padding-bottom:4px;">
+        <button class="job-tag" style="padding:8px 14px;cursor:pointer;margin-right:6px;font-size:13px;" onclick="loadJobs()">Все</button>
+        <button class="job-tag" style="padding:8px 14px;cursor:pointer;margin-right:6px;font-size:13px;" onclick="filterJobs('it')">💻 IT</button>
+        <button class="job-tag" style="padding:8px 14px;cursor:pointer;margin-right:6px;font-size:13px;" onclick="filterJobs('transport')">🚗 Транспорт</button>
+        <button class="job-tag" style="padding:8px 14px;cursor:pointer;margin-right:6px;font-size:13px;" onclick="filterJobs('build')">🏗️ Стройка</button>
+        <button class="job-tag" style="padding:8px 14px;cursor:pointer;margin-right:6px;font-size:13px;" onclick="filterJobs('clean')">🧹 Уборка</button>
+        <button class="job-tag" style="padding:8px 14px;cursor:pointer;margin-right:6px;font-size:13px;" onclick="filterJobs('other')">🔧 Другое</button>
+      </div>
+      <div id="worker-jobs-list"><div style="text-align:center;padding:20px;color:var(--text2);">Загрузка...</div></div>
+      <button class="btn-ghost" style="margin-top:8px;" onclick="el('jobs-worker').style.display='none';el('jobs-role').style.display='block';">← Сменить роль</button>
     </div>
+
+  </div>
+</div>
+
+<!-- Детали заказа -->
+<div id="job-detail" style="display:none;position:fixed;inset:0;z-index:3000;background:var(--bg);flex-direction:column;overflow-y:auto;"></div>
+
+<!-- Чат по заказу -->
+<div id="job-chat" style="display:none;position:fixed;inset:0;z-index:4000;background:var(--bg);flex-direction:column;">
+  <div class="pg-head">
+    <button class="pg-back" onclick="closeJobChat()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
+    <span class="pg-head-title" id="job-chat-title">Чат</span>
+  </div>
+  <div id="job-chat-msgs" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;"></div>
+  <div class="chat-input-row">
+    <input class="chat-inp" id="job-chat-inp" placeholder="Сообщение..." onkeydown="if(event.key==='Enter')sendJobChatMsg()">
+    <button class="chat-send" onclick="sendJobChatMsg()"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+  </div>
+</div>
+
+<!-- Рейтинг -->
+<div id="rating-panel" style="display:none;position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,0.7);align-items:flex-end;">
+  <div style="background:white;border-radius:24px 24px 0 0;padding:24px;width:100%;">
+    <div style="font-size:18px;font-weight:700;margin-bottom:16px;" id="rating-title">Оценить</div>
+    <input type="hidden" id="rating-job-id">
+    <input type="hidden" id="rating-target">
+    <div id="rating-stars" style="display:flex;gap:8px;justify-content:center;margin-bottom:16px;"></div>
+    <textarea class="inp" id="rating-review" placeholder="Отзыв (необязательно)" rows="3" style="resize:none;"></textarea>
+    <button class="btn" onclick="submitRating()">⭐ Отправить оценку</button>
+    <button class="btn-ghost" onclick="closeRating()">Отмена</button>
   </div>
 </div>
 
@@ -479,13 +547,14 @@
 
 <!-- ── СКРИПТЫ (в конце — не блокируют загрузку) ── -->
 <script src="js/app.js"></script>
+<script src="js/jobs.js"></script>
 <script src="js/nfc.js"></script>
 <script src="js/patent.js"></script>
 <script src="js/firebase.js"></script>
 
 <script>
 // Загрузить Firebase через 2 сек после загрузки страницы
-setTimeout(loadFirebase, 2000);
+setTimeout(function(){ loadFirebase(); setTimeout(initJobsDB, 3000); }, 2000);
 </script>
 
 </body>
