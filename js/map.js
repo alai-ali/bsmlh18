@@ -9,7 +9,6 @@ function initMap() {
   if (mapInitialized) return;
   if (!document.getElementById('map-container')) return;
 
-  // Загрузить Leaflet CSS
   if (!document.getElementById('leaflet-css')) {
     var link = document.createElement('link');
     link.id = 'leaflet-css';
