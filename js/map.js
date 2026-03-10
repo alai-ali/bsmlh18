@@ -6,16 +6,14 @@ var workersLayer = null;
 var currentFilter = '';
 
 function initMap() {
+  T('initMap старт');
   if (map) { map.invalidateSize(); return; }
-  if (!document.getElementById('map-container')) return;
-
-  if (!document.getElementById('leaflet-css')) {
-    var link = document.createElement('link');
-    link.id = 'leaflet-css';
-    link.rel = 'stylesheet';
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    document.head.appendChild(link);
+  if (window.L) {
+    createMap();
+  } else {
+    T('Leaflet не загружен!');
   }
+}
 
   // Загрузить Leaflet JS
   if (!window.L) {
