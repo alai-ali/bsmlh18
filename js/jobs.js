@@ -70,7 +70,11 @@ function selectJobCategory(catId) {
 }
 
 function postNewJob() {
-  if (!jobsDB) { initJobsDB(); }
+  if (!jobsDB) {
+    T('⏳ Подключение...');
+    initJobsDB();
+    setTimeout(postNewJob, 1500);
+    return; }
   var title = el('jp-title').value.trim();
   var desc = el('jp-desc').value.trim();
   var price = el('jp-price').value.trim();
