@@ -70,6 +70,7 @@ function selectJobCategory(catId) {
 }
 
 function postNewJob() {
+  if (!jobsDB) { initJobsDB(); }
   var title = el('jp-title').value.trim();
   var desc = el('jp-desc').value.trim();
   var price = el('jp-price').value.trim();
