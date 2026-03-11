@@ -242,7 +242,8 @@ function openJobChat(jobId, workerHuid, workerName) {
   el('job-chat-msgs').innerHTML = '';
 
   if (!jobsDB) return;
-  chatRef = firebase.database().ref('job_chats/' + jobId + '_' + workerHuid.replace(/[^a-zA-Z0-9]/g,''));
+  var chatKey = (jobId + '_' + workerHuid).replace(/[^a-zA-Z0-9]/g,'').substring(0,50);
+chatRef = firebase.database().ref('job_chats/' + chatKey);
   chatRef.on('child_added', function(snap) {
     var msg = snap.val();
     var msgs = el('job-chat-msgs');
