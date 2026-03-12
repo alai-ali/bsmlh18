@@ -215,9 +215,8 @@ function renderApplicants(j) {
 }
 
 function selectApplicant(jobId, workerHuid) {
-  if (!jobsDB) return;
-  jobsDB.child(jobId + '/status').set('closed');
-  jobsDB.child(jobId + '/selectedWorker').set(workerHuid);
+  firebase.database().ref('jobs/' + jobId + '/status').set('closed');
+  firebase.database().ref('jobs/' + jobId + '/selectedWorker').set(workerHuid);
   T('✅ Работник выбран!');
   closeJobDetail();
 }
