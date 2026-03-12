@@ -248,7 +248,7 @@ function openJobChat(jobId, workerHuid, workerName) {
   el('job-chat').style.display = 'flex';
 
   // Ключ чата = jobId + HUID работника
-  var chatKey = (jobId + workerHuid).replace(/[^a-zA-Z0-9]/g,'').substring(0,60);
+  var chatKey = (jobId + '_' + workerHuid).replace(/[^a-zA-Z0-9]/g,'').substring(0,60);
   
   if (!window.firebase || !firebase.apps.length) { 
     T('Нет соединения'); 
