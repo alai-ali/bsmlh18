@@ -1,7 +1,7 @@
 // БИРЖА ТРУДА
 var jobsDB = null;
 var currentJobId = null;
-var currentRole = null; // 'employer' или 'worker'
+var currentRole = null;
 
 function initJobsDB() {
   if (!window.firebase || !firebase.apps || !firebase.apps.length) {
@@ -9,25 +9,24 @@ function initJobsDB() {
   }
   try {
     jobsDB = firebase.database().ref('jobs');
-    console.log('JobsDB ready');
   } catch(e) {
-    setTimeout(initJobsDB, 800); return;
+    setTimeout(initJobsDB, 800);
   }
 }
 
-// РОЛЬ
 function selectRole(role) {
   currentRole = role;
+  U.jobRole = role;
   el('jobs-role').style.display = 'none';
   if (role === 'employer') {
     el('jobs-employer').style.display = 'block';
+    loadMyJobs();
   } else {
     el('jobs-worker').style.display = 'block';
     loadJobs();
   }
 }
 
-// КАТЕГОРИИ
 var jobCategories = [
   { id:'it', icon:'💻', name:'IT и технологии' },
   { id:'build', icon:'🏗️', name:'Строительство' },
@@ -52,7 +51,6 @@ function renderCategories(targetId, onSelect) {
   }).join('');
 }
 
-// РАБОТОДАТЕЛЬ
 var selectedCategory = '';
 
 function showPostJob() {
@@ -70,11 +68,6 @@ function selectJobCategory(catId) {
 }
 
 function postNewJob() {
-  if (!jobsDB) {
-    T('⏳ Подключение...');
-    initJobsDB();
-    setTimeout(postNewJob, 1500);
-    return; }
   var title = el('jp-title').value.trim();
   var desc = el('jp-desc').value.trim();
   var price = el('jp-price').value.trim();
@@ -82,33 +75,21 @@ function postNewJob() {
   if (!title) { T('Введите название заказа'); return; }
   if (!desc) { T('Опишите задание'); return; }
   if (!price) { T('Укажите оплату'); return; }
-
   var job = {
     id: Date.now().toString(36).toUpperCase(),
-    title: title,
-    desc: desc,
-    price: price,
+    title: title, desc: desc, price: price,
     location: location || 'Удалённо',
     category: selectedCategory,
-    employer: U.name,
-    employerHuid: U.huid,
-    status: 'open',
-    createdAt: Date.now(),
-    applicants: {}
+    employer: U.name, employerHuid: U.huid,
+    status: 'open', createdAt: Date.now(), applicants: {}
   };
-
-  if (jobsDB) {
-    jobsDB.child(job.id).set(job).then(function() {
-      T('✅ Заказ опубликован!');
-      el('jobs-post-form').style.display = 'none';
-      el('jobs-employer-home').style.display = 'block';
-      loadMyJobs();
-      clearPostForm();
-    }).catch(function(e){ T('Ошибка: ' + e.message); });
-  } else {
-  T('⏳ Подключение... попробуйте ещё раз');
-    initJobsDB();
-  }
+  firebase.database().ref('jobs/' + job.id).set(job).then(function() {
+    T('✅ Заказ опубликован!');
+    el('jobs-post-form').style.display = 'none';
+    el('jobs-employer-home').style.display = 'block';
+    loadMyJobs();
+    clearPostForm();
+  }).catch(function(e){ T('Ошибка: ' + e.message); });
 }
 
 function clearPostForm() {
@@ -116,10 +97,9 @@ function clearPostForm() {
 }
 
 function loadMyJobs() {
-  if (!jobsDB) return;
   var list = el('my-jobs-list');
   if (!list) return;
-  jobsDB.orderByChild('employerHuid').equalTo(U.huid).on('value', function(snap) {
+  firebase.database().ref('jobs').orderByChild('employerHuid').equalTo(U.huid).on('value', function(snap) {
     var jobs = snap.val();
     if (!jobs) { list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text2);font-size:13px;">Нет активных заказов</div>'; return; }
     list.innerHTML = Object.values(jobs).reverse().map(function(j) {
@@ -134,56 +114,61 @@ function loadMyJobs() {
   });
 }
 
-// РАБОТНИК
 function loadJobs() {
   var list = el('worker-jobs-list');
   if (!list) return;
-firebase.database().ref('jobs').on('value', function(snap) {    var jobs = snap.val();
+  firebase.database().ref('jobs').on('value', function(snap) {
+    var jobs = snap.val();
     if (!jobs) { list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text2);font-size:13px;">Нет доступных заказов</div>'; return; }
     list.innerHTML = Object.values(jobs).reverse().map(function(j) {
-      var alreadyApplied = j.applicants && j.applicants[U.huid.replace(/[^a-zA-Z0-9]/g,'')];
+      var myKey = U.huid.replace(/[^a-zA-Z0-9]/g,'');
+      var alreadyApplied = j.applicants && j.applicants[myKey];
+      var isSelected = j.selectedWorker === U.huid;
       var cat = jobCategories.find(function(c){return c.id===j.category;})||{icon:'🔧'};
-      return '<div class="job-item" onclick="openJobDetail(\''+j.id+'\')" style="cursor:pointer;">'
+      var bottomBtn = '';
+      if (j.status === 'closed') {
+        if (isSelected) {
+          bottomBtn = '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;">'
+            + '<span style="font-size:13px;color:var(--green);font-weight:600;flex:1;">🎉 Вы выбраны!</span>'
+            + '<button style="padding:8px 14px;background:var(--green);color:white;border:none;border-radius:10px;font-size:13px;cursor:pointer;" onclick="event.stopPropagation();openJobChat(\''+j.id+'\',\''+U.huid+'\',\''+j.employer+'\')">💬 Чат</button>'
+            + '</div>';
+        } else if (alreadyApplied) {
+          bottomBtn = '<div style="margin-top:10px;font-size:13px;color:#EF4444;text-align:center;padding:8px;background:#FEE2E2;border-radius:8px;">😔 Выбран другой исполнитель</div>';
+        } else {
+          bottomBtn = '<div style="margin-top:10px;font-size:13px;color:var(--text2);text-align:center;padding:8px;background:var(--bg);border-radius:8px;">🔒 Заказ закрыт</div>';
+        }
+      } else {
+        if (alreadyApplied) {
+          bottomBtn = '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;">'
+            + '<span style="font-size:13px;color:var(--green);font-weight:600;flex:1;">✅ Вы откликнулись</span>'
+            + '<button style="padding:8px 14px;background:var(--green);color:white;border:none;border-radius:10px;font-size:13px;cursor:pointer;" onclick="event.stopPropagation();openJobChat(\''+j.id+'\',\''+U.huid+'\',\''+j.employer+'\')">💬 Чат</button>'
+            + '</div>';
+        } else {
+          bottomBtn = '<button class="btn" style="margin-top:10px;padding:10px;font-size:13px;" onclick="event.stopPropagation();applyToJob(\''+j.id+'\',this)">Откликнуться</button>';
+        }
+      }
+      return '<div class="job-item">'
         + '<div class="job-company">' + cat.icon + ' ' + j.employer + '</div>'
-        + '<div class="job-title">' + j.title + '</div>'
+        + '<div class="job-title" onclick="openJobDetail(\''+j.id+'\')" style="cursor:pointer;">' + j.title + '</div>'
         + '<div style="font-size:13px;color:var(--text2);margin-bottom:8px;line-height:1.5;">' + j.desc.substring(0,80) + (j.desc.length>80?'...':'') + '</div>'
         + '<div class="job-tags"><span class="job-tag">'+j.price+'</span><span class="job-tag">'+j.location+'</span></div>'
-        + (alreadyApplied
-          ? '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;"><span style="font-size:13px;color:var(--green);font-weight:600;flex:1;">✅ Вы откликнулись</span><button style="padding:8px 14px;background:var(--green);color:white;border:none;border-radius:10px;font-size:13px;cursor:pointer;" onclick="event.stopPropagation();openJobChat(\''+j.id+'\',\''+U.huid+'\',\''+j.employer+'\')">💬 Чат</button></div>'
-+ (j.status === 'closed'
-  ? (j.selectedWorker === U.huid
-    ? '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;"><span style="font-size:13px;color:var(--green);font-weight:600;flex:1;">🎉 Вы выбраны!</span><button style="padding:8px 14px;background:var(--green);color:white;border:none;border-radius:10px;font-size:13px;cursor:pointer;" onclick="event.stopPropagation();openJobChat(\''+j.id+'\',\''+j.selectedWorker+'\',\''+j.employer+'\')">💬 Чат</button></div>'
-    : '<div style="margin-top:10px;font-size:13px;color:var(--text2);text-align:center;padding:8px;background:var(--bg);border-radius:8px;">🔒 Заказ закрыт</div>')
-  : alreadyApplied
-    ? '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;"><span style="font-size:13px;color:var(--green);font-weight:600;flex:1;">✅ Вы откликнулись</span><button style="padding:8px 14px;background:var(--green);color:white;border:none;border-radius:10px;font-size:13px;cursor:pointer;" onclick="event.stopPropagation();openJobChat(\''+j.id+'\',\''+U.huid+'\',\''+j.employer+'\')">💬 Чат</button></div>'
-    : '<button class="btn" style="margin-top:10px;padding:10px;font-size:13px;" onclick="event.stopPropagation();applyToJob(\''+j.id+'\',this)">Откликнуться</button>')
-+ '</div>';
+        + bottomBtn
+        + '</div>';
     }).join('');
   });
 }
 
-function applyToJob(jobId, btn) {
-  if (!jobsDB) { T('Нет соединения'); return; }
-  var key = U.huid.replace(/[^a-zA-Z0-9]/g,'');
-  var applicant = { name: U.name, huid: U.huid, appliedAt: Date.now(), status: 'pending' };
-  jobsDB.child(jobId + '/applicants/' + key).set(applicant).then(function() {
-    if (btn) { btn.innerText = '✅ Отклик отправлен'; btn.disabled = true; btn.style.background = '#6B7280'; }
-    T('✅ Отклик отправлен!');
-  }).catch(function(e){ T('Ошибка: ' + e.message); });
-}
-
-// ДЕТАЛИ ЗАКАЗА
 function openJobDetail(jobId) {
   currentJobId = jobId;
-firebase.database().ref('jobs/' + jobId).once('value', function(snap) {    var j = snap.val();
+  firebase.database().ref('jobs/' + jobId).once('value', function(snap) {
+    var j = snap.val();
     if (!j) return;
     var isEmployer = j.employerHuid === U.huid;
-    var detail = el('job-detail');
+    var myKey = U.huid.replace(/[^a-zA-Z0-9]/g,'');
+    var alreadyApplied = j.applicants && j.applicants[myKey];
     var cat = jobCategories.find(function(c){return c.id===j.category;}) || {icon:'🔧',name:'Другое'};
-    var appCount = j.applicants ? Object.keys(j.applicants).length : 0;
-    var alreadyApplied = j.applicants && j.applicants[U.huid.replace(/[^a-zA-Z0-9]/g,'')];
-
-    detail.innerHTML = '<div class="pg-head" style="background:white;padding:16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);">'
+    el('job-detail').innerHTML =
+      '<div class="pg-head" style="background:white;padding:16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);">'
       + '<button class="pg-back" onclick="closeJobDetail()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>'
       + '<span style="font-size:17px;font-weight:700;">Детали заказа</span></div>'
       + '<div style="padding:16px;overflow-y:auto;flex:1;">'
@@ -194,9 +179,9 @@ firebase.database().ref('jobs/' + jobId).once('value', function(snap) {    var j
       + '<div class="card"><div class="section-title">Работодатель</div><div style="font-size:14px;font-weight:600;">' + j.employer + '</div></div>'
       + (isEmployer ? renderApplicants(j) :
           alreadyApplied ? '<div style="text-align:center;padding:20px;font-size:15px;font-weight:700;color:var(--green);">✅ Вы уже откликнулись</div>'
+          : j.status === 'closed' ? '<div style="text-align:center;padding:20px;font-size:14px;color:var(--text2);">🔒 Заказ закрыт</div>'
           : '<button class="btn" onclick="applyToJob(\''+j.id+'\',this)">Откликнуться</button>')
       + '</div>';
-
     el('job-detail').style.display = 'flex';
   });
 }
@@ -208,15 +193,29 @@ function renderApplicants(j) {
   var apps = Object.values(j.applicants);
   return '<div class="card"><div class="section-title">Отклики (' + apps.length + ')</div>'
     + apps.map(function(a) {
+      var isSelected = j.selectedWorker === a.huid;
       return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">'
-        + '<div><div style="font-size:14px;font-weight:600;">' + a.name + '</div>'
+        + '<div><div style="font-size:14px;font-weight:600;">' + a.name + (isSelected ? ' ✅' : '') + '</div>'
         + '<div style="font-size:11px;color:var(--text2);">' + a.huid + '</div></div>'
         + '<div style="display:flex;gap:8px;">'
-        + '<button style="padding:6px 12px;background:var(--green);color:white;border:none;border-radius:8px;font-size:12px;cursor:pointer;" onclick="selectApplicant(\''+j.id+'\',\''+a.huid+'\')">✓ Выбрать</button>'
+        + (j.status === 'closed'
+          ? (isSelected ? '<span style="font-size:12px;color:var(--green);font-weight:700;padding:6px;">Выбран</span>' : '')
+          : '<button style="padding:6px 12px;background:var(--green);color:white;border:none;border-radius:8px;font-size:12px;cursor:pointer;" onclick="selectApplicant(\''+j.id+'\',\''+a.huid+'\')">✓ Выбрать</button>')
         + '<button style="padding:6px 12px;background:var(--bg);color:var(--text2);border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;" onclick="openJobChat(\''+j.id+'\',\''+a.huid+'\',\''+a.name+'\')">💬</button>'
         + '</div></div>';
     }).join('')
     + '</div>';
+}
+
+function applyToJob(jobId, btn) {
+  if (btn) btn.disabled = true;
+  var myKey = U.huid.replace(/[^a-zA-Z0-9]/g,'');
+  firebase.database().ref('jobs/' + jobId + '/applicants/' + myKey).set({
+    name: U.name, huid: U.huid, time: Date.now()
+  }).then(function() {
+    T('✅ Вы откликнулись!');
+    loadJobs();
+  }).catch(function(e){ T('Ошибка: ' + e.message); });
 }
 
 function selectApplicant(jobId, workerHuid) {
@@ -236,37 +235,28 @@ var chatJobId = null;
 var chatWorkerHuid = null;
 
 function openJobChat(jobId, workerHuid, workerName) {
-  // Отключить старый listener
   if (chatRef) { chatRef.off(); chatRef = null; }
-  
   chatJobId = jobId;
   chatWorkerHuid = workerHuid;
-  
   var chatTitle = el('job-chat-title');
   if (chatTitle) chatTitle.innerText = workerName;
-  
-  // Очистить сообщения
   el('job-chat-msgs').innerHTML = '';
   el('job-chat').style.display = 'flex';
-
-  // Ключ чата = jobId + HUID работника
   var chatKey = (jobId + '_' + workerHuid).replace(/[^a-zA-Z0-9]/g,'').substring(0,60);
-  
-  if (!window.firebase || !firebase.apps.length) { 
-    T('Нет соединения'); 
-    return; 
-  }
-  
+  if (!window.firebase || !firebase.apps.length) { T('Нет соединения'); return; }
   chatRef = firebase.database().ref('job_chats/' + chatKey);
-  chatRef.on('child_added', function(snap) {
-    var msg = snap.val();
-    if (!msg) return;
+  chatRef.on('value', function(snap) {
     var msgs = el('job-chat-msgs');
-    var isMe = msg.senderHuid === U.huid;
-    var d = document.createElement('div');
-    d.className = 'msg ' + (isMe ? 'user' : 'bot');
-    d.innerHTML = '<div style="font-size:10px;opacity:0.7;margin-bottom:2px;">' + (isMe ? 'Вы' : msg.senderName) + '</div>' + msg.text;
-    msgs.appendChild(d);
+    msgs.innerHTML = '';
+    snap.forEach(function(child) {
+      var msg = child.val();
+      if (!msg) return;
+      var isMe = msg.senderHuid === U.huid;
+      var d = document.createElement('div');
+      d.className = 'msg ' + (isMe ? 'user' : 'bot');
+      d.innerHTML = '<div style="font-size:10px;opacity:0.7;margin-bottom:2px;">' + (isMe ? 'Вы' : msg.senderName) + '</div>' + msg.text;
+      msgs.appendChild(d);
+    });
     msgs.scrollTop = msgs.scrollHeight;
   });
 }
@@ -277,17 +267,14 @@ function sendJobChatMsg() {
   var text = inp.value.trim();
   inp.value = '';
   if (!chatRef) { T('Нет соединения'); return; }
-  chatRef.push({ 
-    text: text, 
-    senderName: U.name, 
-    senderHuid: U.huid, 
-    time: Date.now() 
-  });
+  chatRef.push({ text: text, senderName: U.name, senderHuid: U.huid, time: Date.now() });
 }
+
 function closeJobChat() {
   if (chatRef) { chatRef.off(); chatRef = null; }
   el('job-chat').style.display = 'none';
 }
+
 // РЕЙТИНГ
 function openRating(jobId, targetHuid, targetName) {
   el('rating-title').innerText = 'Оценить: ' + targetName;
@@ -312,36 +299,28 @@ function submitRating() {
   var jobId = el('rating-job-id').value;
   var targetHuid = el('rating-target').value;
   var review = el('rating-review').value.trim();
-  if (jobsDB) {
-    firebase.database().ref('ratings/' + targetHuid.replace(/[^a-zA-Z0-9]/g,'')).push({
-      rating: selectedRating, review: review, from: U.name, fromHuid: U.huid, jobId: jobId, time: Date.now()
-    }).then(function(){ T('✅ Оценка отправлена!'); el('rating-panel').style.display='none'; });
-  } else {
-    T('✅ Оценка отправлена (демо)!');
-    el('rating-panel').style.display = 'none';
-  }
+  firebase.database().ref('ratings/' + targetHuid.replace(/[^a-zA-Z0-9]/g,'')).push({
+    rating: selectedRating, review: review, from: U.name, fromHuid: U.huid, jobId: jobId, time: Date.now()
+  }).then(function(){ T('⭐ Оценка отправлена!'); el('rating-panel').style.display='none'; });
 }
 
 function closeRating() { el('rating-panel').style.display = 'none'; }
 
-// ФИЛЬТР
 function filterJobs(catId) {
-  if (!jobsDB) return;
   var list = el('worker-jobs-list');
-  var query = catId ? jobsDB.orderByChild('category').equalTo(catId) : jobsDB.orderByChild('status').equalTo('open');
-  query.on('value', function(snap) {
+  if (!list) return;
+  firebase.database().ref('jobs').on('value', function(snap) {
     var jobs = snap.val();
     if (!jobs) { list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text2);">Нет заказов</div>'; return; }
-    var filtered = Object.values(jobs).filter(function(j){ return j.status==='open'; });
-    if (!filtered.length) { list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text2);">Нет заказов в этой категории</div>'; return; }
-    list.innerHTML = filtered.reverse().map(function(j) {
+    var all = Object.values(jobs).filter(function(j){ return !catId || j.category === catId; });
+    if (!all.length) { list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text2);">Нет заказов в этой категории</div>'; return; }
+    list.innerHTML = all.reverse().map(function(j) {
       var cat = jobCategories.find(function(c){return c.id===j.category;})||{icon:'🔧'};
       return '<div class="job-item" onclick="openJobDetail(\''+j.id+'\')" style="cursor:pointer;">'
         + '<div class="job-company">' + cat.icon + ' ' + j.employer + '</div>'
         + '<div class="job-title">' + j.title + '</div>'
         + '<div style="font-size:13px;color:var(--text2);margin-bottom:8px;">' + j.desc.substring(0,80) + '...</div>'
         + '<div class="job-tags"><span class="job-tag">'+j.price+'</span><span class="job-tag">'+j.location+'</span></div>'
-        + '<button class="btn" style="margin-top:10px;padding:10px;font-size:13px;" onclick="event.stopPropagation();applyToJob(\''+j.id+'\',this)">Откликнуться</button>'
         + '</div>';
     }).join('');
   });
