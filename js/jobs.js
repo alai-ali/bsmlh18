@@ -329,22 +329,19 @@ function closeRating() { el('rating-panel').style.display = 'none'; }
 
 // ФИЛЬТР
 function filterJobs(catId) {
-  if (!jobsDB) return;
   var list = el('worker-jobs-list');
-  var query = catId ? jobsDB.orderByChild('category').equalTo(catId) : jobsDB.orderByChild('status').equalTo('open');
-  query.on('value', function(snap) {
+  firebase.database().ref('jobs').on('value', function(snap) {
     var jobs = snap.val();
     if (!jobs) { list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text2);">Нет заказов</div>'; return; }
-    var filtered = Object.values(jobs).filter(function(j){ return j.status==='open'; });
+    var filtered = Object.values(jobs).filter(function(j){ return !catId || j.category === catId; });
     if (!filtered.length) { list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text2);">Нет заказов в этой категории</div>'; return; }
     list.innerHTML = filtered.reverse().map(function(j) {
-      var cat = jobCategories.find(function(c){return c.id===j.category;})||{icon:'??'};
+      var cat = jobCategories.find(function(c){return c.id===j.category;})||{icon:'🔧'};
       return '<div class="job-item" onclick="openJobDetail(\''+j.id+'\')" style="cursor:pointer;">'
         + '<div class="job-company">' + cat.icon + ' ' + j.employer + '</div>'
         + '<div class="job-title">' + j.title + '</div>'
         + '<div style="font-size:13px;color:var(--text2);margin-bottom:8px;">' + j.desc.substring(0,80) + '...</div>'
         + '<div class="job-tags"><span class="job-tag">'+j.price+'</span><span class="job-tag">'+j.location+'</span></div>'
-        + '<button class="btn" style="margin-top:10px;padding:10px;font-size:13px;" onclick="event.stopPropagation();applyToJob(\''+j.id+'\',this)">Откликнуться</button>'
         + '</div>';
     }).join('');
   });
