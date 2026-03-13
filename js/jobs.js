@@ -107,14 +107,69 @@ function loadMyJobs() {
     if (!jobs) { list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text2);font-size:13px;">Нет активных заказов</div>'; return; }
     list.innerHTML = Object.values(jobs).reverse().map(function(j) {
       var appCount = j.applicants ? Object.keys(j.applicants).length : 0;
+      var statusColor = j.status==='open' ? 'var(--green)' : j.status==='done' ? '#059669' : '#EF4444';
+      var statusBg = j.status==='open' ? 'var(--green-light)' : j.status==='done' ? '#D1FAE5' : '#FEE2E2';
+      var statusText = j.status==='open' ? 'Открыт' : j.status==='done' ? 'Завершён' : 'Закрыт';
       return '<div class="job-item" onclick="openJobDetail(\''+j.id+'\')" style="cursor:pointer;">'
         + '<div class="job-company">' + (jobCategories.find(function(c){return c.id===j.category;})||{icon:'🔧'}).icon + ' ' + j.location + '</div>'
         + '<div class="job-title">' + j.title + '</div>'
-        + '<div class="job-tags"><span class="job-tag">'+j.price+'</span><span class="job-tag" style="background:'+(j.status==='open'?'var(--green-light)':'#FEE2E2')+';color:'+(j.status==='open'?'var(--green)':'#EF4444')+'">'+(j.status==='open'?'Открыт':'Закрыт')+'</span></div>'
+        + '<div class="job-tags"><span class="job-tag">'+j.price+'</span><span class="job-tag" style="background:'+statusBg+';color:'+statusColor+'">'+statusText+'</span></div>'
         + '<div style="font-size:12px;color:var(--green);margin-top:6px;font-weight:600;">👥 Откликов: '+appCount+'</div>'
         + '</div>';
     }).join('');
   });
+}
+
+// ТОКЕНЫ
+function addToken(userHuid, type, amount) {
+  var key = userHuid.replace(/[^a-zA-Z0-9]/g,'');
+  var ref = firebase.database().ref('tokens/' + key + '/' + type);
+  ref.once('value', function(snap) {
+    var cur = snap.val() || 0;
+    ref.set(Math.round((cur + amount) * 100000) / 100000);
+  });
+}
+
+// ЗАВЕРШЕНИЕ — работодатель подтверждает
+function completeJobEmployer(jobId, workerHuid) {
+  firebase.database().ref('jobs/' + jobId + '/confirmedEmployer').set(true).then(function() {
+    T('✅ Вы подтвердили завершение');
+    firebase.database().ref('jobs/' + jobId).once('value', function(snap) {
+      var j = snap.val();
+      if (j && j.confirmedWorker) finishJob(jobId, workerHuid, j.employerHuid);
+    });
+    closeJobDetail();
+  });
+}
+
+// ЗАВЕРШЕНИЕ — работник подтверждает
+function completeJobWorker(jobId, employerHuid) {
+  firebase.database().ref('jobs/' + jobId + '/confirmedWorker').set(true).then(function() {
+    T('✅ Вы подтвердили завершение');
+    firebase.database().ref('jobs/' + jobId).once('value', function(snap) {
+      var j = snap.val();
+      if (j && j.confirmedEmployer) finishJob(jobId, U.huid, employerHuid);
+    });
+    closeJobDetail();
+  });
+}
+
+// ФИНАЛЬНОЕ ЗАВЕРШЕНИЕ — оба подтвердили
+function finishJob(jobId, workerHuid, employerHuid) {
+  firebase.database().ref('jobs/' + jobId + '/status').set('done');
+  addToken(workerHuid, 'qrt', 1);
+  addToken(employerHuid, 'qrt', 0.1);
+  T('🎉 Заказ завершён! Начислены QRT токены');
+  setTimeout(function() {
+    firebase.database().ref('jobs/' + jobId).once('value', function(snap) {
+      var j = snap.val(); if (!j) return;
+      if (U.huid === workerHuid) {
+        openRating(jobId, employerHuid, j.employer, 'worker');
+      } else {
+        openRating(jobId, workerHuid, j.employer, 'employer');
+      }
+    });
+  }, 800);
 }
 
 // РАБОТНИК
@@ -134,11 +189,17 @@ function loadJobs() {
       var isSelected = j.selectedWorker === U.huid;
       var cat = jobCategories.find(function(c){return c.id===j.category;})||{icon:'🔧'};
       var btn = '';
-      if (j.status === 'closed') {
+      if (j.status === 'done') {
+        btn = '<div style="margin-top:10px;font-size:13px;color:#059669;text-align:center;padding:8px;background:#D1FAE5;border-radius:8px;font-weight:600;">✅ Заказ завершён</div>';
+      } else if (j.status === 'closed') {
         if (isSelected) {
-          btn = '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;">'
+          var confirmBtn = j.confirmedWorker
+            ? '<span style="font-size:12px;color:#059669;font-weight:600;padding:8px;">⏳ Ждём работодателя...</span>'
+            : '<button style="padding:8px 14px;background:#059669;color:white;border:none;border-radius:10px;font-size:13px;cursor:pointer;font-weight:600;" onclick="event.stopPropagation();completeJobWorker(\''+j.id+'\',\''+j.employerHuid+'\')">✅ Завершить</button>';
+          btn = '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
             + '<span style="font-size:13px;color:var(--green);font-weight:600;flex:1;">🎉 Вы выбраны!</span>'
             + '<button style="padding:8px 14px;background:var(--green);color:white;border:none;border-radius:10px;font-size:13px;cursor:pointer;" onclick="event.stopPropagation();openJobChat(\''+j.id+'\',\''+U.huid+'\',\''+j.employer+'\')">💬 Чат</button>'
+            + confirmBtn
             + '</div>';
         } else if (alreadyApplied) {
           btn = '<div style="margin-top:10px;font-size:13px;color:#EF4444;text-align:center;padding:8px;background:#FEE2E2;border-radius:8px;">😔 Выбран другой исполнитель</div>';
@@ -213,13 +274,21 @@ function renderApplicants(j) {
   return '<div class="card"><div class="section-title">Отклики (' + apps.length + ')</div>'
     + apps.map(function(a) {
       var isSelected = j.selectedWorker === a.huid;
+      var actionBtn = '';
+      if (j.status === 'done') {
+        actionBtn = '<span style="font-size:12px;color:#059669;font-weight:700;padding:6px;">✅ Завершён</span>';
+      } else if (j.status === 'closed' && isSelected) {
+        actionBtn = j.confirmedEmployer
+          ? '<span style="font-size:12px;color:#059669;font-weight:600;padding:6px;">⏳ Ждём работника...</span>'
+          : '<button style="padding:6px 14px;background:#059669;color:white;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;" onclick="completeJobEmployer(\''+j.id+'\',\''+a.huid+'\')">✅ Завершить</button>';
+      } else if (j.status === 'open') {
+        actionBtn = '<button style="padding:6px 14px;background:var(--green);color:white;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;" onclick="selectApplicant(\''+j.id+'\',\''+a.huid+'\')">✓ Выбрать</button>';
+      }
       return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">'
         + '<div><div style="font-size:14px;font-weight:600;">' + a.name + (isSelected ? ' ✅' : '') + '</div>'
         + '<div style="font-size:11px;color:var(--text2);">' + a.huid + '</div></div>'
-        + '<div style="display:flex;gap:8px;">'
-        + (j.status === 'closed'
-          ? (isSelected ? '<span style="font-size:12px;color:var(--green);font-weight:700;padding:6px;">Выбран</span>' : '')
-          : '<button style="padding:6px 14px;background:var(--green);color:white;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;" onclick="selectApplicant(\''+j.id+'\',\''+a.huid+'\')">✓ Выбрать</button>')
+        + '<div style="display:flex;gap:8px;align-items:center;">'
+        + actionBtn
         + '<button style="padding:6px 14px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;" onclick="openJobChat(\''+j.id+'\',\''+a.huid+'\',\''+a.name+'\')">💬 Чат</button>'
         + '</div></div>';
     }).join('')
@@ -281,10 +350,11 @@ function closeJobChat() {
 }
 
 // РЕЙТИНГ
-function openRating(jobId, targetHuid, targetName) {
+function openRating(jobId, targetHuid, targetName, targetRole) {
   el('rating-title').innerText = 'Оценить: ' + targetName;
   el('rating-job-id').value = jobId;
   el('rating-target').value = targetHuid;
+  el('rating-target-role').value = targetRole || '';
   el('rating-panel').style.display = 'flex';
   renderStars(0);
 }
@@ -303,10 +373,30 @@ function submitRating() {
   if (!selectedRating) { T('Поставьте оценку'); return; }
   var jobId = el('rating-job-id').value;
   var targetHuid = el('rating-target').value;
+  var targetRole = el('rating-target-role') ? el('rating-target-role').value : '';
   var review = el('rating-review').value.trim();
-  firebase.database().ref('ratings/' + targetHuid.replace(/[^a-zA-Z0-9]/g,'')).push({
-    rating: selectedRating, review: review, from: U.name, fromHuid: U.huid, jobId: jobId, time: Date.now()
-  }).then(function(){ T('⭐ Оценка отправлена!'); el('rating-panel').style.display='none'; });
+  var key = targetHuid.replace(/[^a-zA-Z0-9]/g,'');
+  firebase.database().ref('ratings/' + key).push({
+    rating: selectedRating, review: review,
+    from: U.name, fromHuid: U.huid,
+    jobId: jobId, time: Date.now()
+  }).then(function() {
+    // Начисляем QRNC только работнику и только за 4-5 звёзд
+    if (targetRole === 'worker') {
+      if (selectedRating === 5) {
+        addToken(targetHuid, 'qrnc', 1);
+        T('⭐ Оценка отправлена! +1 QRNC');
+      } else if (selectedRating === 4) {
+        addToken(targetHuid, 'qrnc', 0.5)// 4 stars;
+        T('⭐ Оценка отправлена! +0.5 QRNC');
+      } else {
+        T('⭐ Оценка отправлена!');
+      }
+    } else {
+      T('⭐ Оценка отправлена!');
+    }
+    el('rating-panel').style.display = 'none';
+  });
 }
 
 function closeRating() { el('rating-panel').style.display = 'none'; }
