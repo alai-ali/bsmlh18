@@ -22,8 +22,8 @@ function showScr(id) {
 function openPg(id) {
   var p = el(id);
   if (p) p.style.display = 'flex';
+  if (id === 'pg-wal' && typeof loadWalletBalance === 'function') loadWalletBalance();
 }
-
 function closePg(id) {
   var p = el(id);
   if (p) p.style.display = 'none';
