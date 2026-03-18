@@ -348,12 +348,13 @@
       </div>
       <!-- Форма заказа -->
       <div id="jobs-post-form" style="display:none;">
-        <div style="font-size:17px;font-weight:700;margin-bottom:4px;">Новый заказ</div>
+        <div 
+          style="font-size:17px;font-weight:700;margin-bottom:4px;">Новый заказ</div>
         <div id="jobs-post-cat-label" style="font-size:13px;color:var(--green);font-weight:600;margin-bottom:16px;"></div>
-        <input class="inp" id="jp-title" placeholder="Название заказа">
-        <textarea class="inp" id="jp-desc" placeholder="Подробное описание задания..." rows="4" style="resize:none;"></textarea>
-        <input class="inp" id="jp-price" placeholder="Оплата (напр. 15 000₸)">
-        <input class="inp" id="jp-location" placeholder="Местоположение (или Удалённо)">
+        <input class="inp" id="jp-title" maxlength="60" placeholder="Название заказа">
+        <textarea class="inp" id="jp-desc" maxlength="500" placeholder="Подробное описание задания..." rows="4" style="resize:none;"></textarea>
+        <input class="inp" id="jp-price" maxlength="20" placeholder="Оплата (напр. 15 000₸)">
+        <input class="inp" id="jp-location" maxlength="50" placeholder="Местоположение (или Удалённо)">
         <button class="btn" onclick="postNewJob()">📢 Опубликовать заказ</button>
         <button class="btn-ghost" onclick="el('jobs-post-form').style.display='none';el('jobs-employer-home').style.display='block';">← Назад</button>
       </div>
@@ -387,7 +388,7 @@
   </div>
   <div id="job-chat-msgs" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;"></div>
   <div class="chat-input-row">
-    <input class="chat-inp" id="job-chat-inp" placeholder="Сообщение..." onkeydown="if(event.key==='Enter')sendJobChatMsg()">
+    <input class="chat-inp" id="job-chat-inp" maxlength="500" placeholder="Сообщение..." onkeydown="if(event.key==='Enter')sendJobChatMsg()">
     <button class="chat-send" onclick="sendJobChatMsg()"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
   </div>
 </div>
@@ -398,8 +399,9 @@
     <div style="font-size:18px;font-weight:700;margin-bottom:16px;" id="rating-title">Оценить</div>
     <input type="hidden" id="rating-job-id">
     <input type="hidden" id="rating-target">
+    <input type="hidden" id="rating-target-role">
 <input type="hidden" id="rating-target-role">    <div id="rating-stars" style="display:flex;gap:8px;justify-content:center;margin-bottom:16px;"></div>
-    <textarea class="inp" id="rating-review" placeholder="Отзыв (необязательно)" rows="3" style="resize:none;"></textarea>
+    <textarea class="inp" id="rating-review" maxlength="300" placeholder="Отзыв (необязательно)" rows="3" style="resize:none;"></textarea>
     <button class="btn" onclick="submitRating()">⭐ Отправить оценку</button>
     <button class="btn-ghost" onclick="closeRating()">Отмена</button>
   </div>
