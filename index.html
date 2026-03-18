@@ -334,11 +334,14 @@
 
     <!-- Работодатель -->
     <div id="jobs-employer" style="display:none;">
+      <div id="jobs-employer-home">
+        <button class="btn" onclick="showPostJob()">+ Разместить заказ</button>
 <div id="jobs-employer-home">
   <button class="btn-ghost" style="margin-bottom:12px;" onclick="el('jobs-employer').style.display='none';el('jobs-role').style.display='block';">← Сменить роль</button>
   <button class="btn" onclick="showPostJob()">+ Разместить заказ</button>
         <div class="section-title">Мои заказы</div>
         <div id="my-jobs-list"><div style="text-align:center;padding:20px;color:var(--text2);font-size:13px;">Нет активных заказов</div></div>
+        <button class="btn-ghost" onclick="el('jobs-employer').style.display='none';el('jobs-role').style.display='block';">← Сменить роль</button>
       </div>
       <!-- Выбор категории -->
       <div id="jobs-cat-select" style="display:none;">
@@ -360,6 +363,8 @@
     </div>
 
     <!-- Работник -->
+    <div id="jobs-worker" style="display:none;">
+      <div style="overflow-x:auto;white-space:nowrap;margin-bottom:16px;padding-bottom:4px;">
    <div id="jobs-worker" style="display:none;">
   <button class="btn-ghost" style="margin-bottom:12px;" onclick="el('jobs-worker').style.display='none';el('jobs-role').style.display='block';">← Сменить роль</button>
   <div style="overflow-x:auto;white-space:nowrap;margin-bottom:16px;padding-bottom:4px;">
@@ -371,6 +376,7 @@
         <button class="job-tag" style="padding:8px 14px;cursor:pointer;margin-right:6px;font-size:13px;" onclick="filterJobs('other')">🔧 Другое</button>
       </div>
       <div id="worker-jobs-list"><div style="text-align:center;padding:20px;color:var(--text2);">Загрузка...</div></div>
+      <button class="btn-ghost" style="margin-top:8px;" onclick="el('jobs-worker').style.display='none';el('jobs-role').style.display='block';">← Сменить роль</button>
     </div>
 
   </div>
@@ -398,7 +404,7 @@
     <div style="font-size:18px;font-weight:700;margin-bottom:16px;" id="rating-title">Оценить</div>
     <input type="hidden" id="rating-job-id">
     <input type="hidden" id="rating-target">
-<input type="hidden" id="rating-target-role">    <div id="rating-stars" style="display:flex;gap:8px;justify-content:center;margin-bottom:16px;"></div>
+    <div id="rating-stars" style="display:flex;gap:8px;justify-content:center;margin-bottom:16px;"></div>
     <textarea class="inp" id="rating-review" placeholder="Отзыв (необязательно)" rows="3" style="resize:none;"></textarea>
     <button class="btn" onclick="submitRating()">⭐ Отправить оценку</button>
     <button class="btn-ghost" onclick="closeRating()">Отмена</button>
