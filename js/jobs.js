@@ -136,15 +136,32 @@ function completeJobEmployer(jobId, workerHuid) {
     T('✅ Вы подтвердили завершение');
     closeJobDetail();
     firebase.database().ref('jobs/' + jobId).once('value', function(snap) {
-      var j = snap.val();
-      if (j && j.confirmedWorker) {
+      var j = snap.val(); if (!j) return;
+      if (j.confirmedWorker) {
         firebase.database().ref('jobs/' + jobId + '/status').set('done');
         addToken(workerHuid, 'qrt', 1);
-        addToken(j.employerHuid, 'qrt', 0.1);
+        addToken(U.huid, 'qrt', 0.1);
         T('🎉 Заказ завершён! Начислены QRT');
-        setTimeout(function() {
+        setTimeout(function(){
           openRating(jobId, workerHuid, j.selectedWorkerName || 'Работник', 'employer');
         }, 800);
+      } else {
+        // Слушаем пока работник подтвердит
+        firebase.database().ref('jobs/' + jobId + '/confirmedWorker').on('value', function(s) {
+          if (s.val() === true) {
+            firebase.database().ref('jobs/' + jobId + '/confirmedWorker').off();
+            firebase.database().ref('jobs/' + jobId).once('value', function(snap2) {
+              var j2 = snap2.val(); if (!j2) return;
+              firebase.database().ref('jobs/' + jobId + '/status').set('done');
+              addToken(workerHuid, 'qrt', 1);
+              addToken(U.huid, 'qrt', 0.1);
+              T('🎉 Заказ завершён! Начислены QRT');
+              setTimeout(function(){
+                openRating(jobId, workerHuid, j2.selectedWorkerName || 'Работник', 'employer');
+              }, 800);
+            });
+          }
+        });
       }
     });
   });
@@ -156,15 +173,32 @@ function completeJobWorker(jobId, employerHuid) {
     T('✅ Вы подтвердили завершение');
     closeJobDetail();
     firebase.database().ref('jobs/' + jobId).once('value', function(snap) {
-      var j = snap.val();
-      if (j && j.confirmedEmployer) {
+      var j = snap.val(); if (!j) return;
+      if (j.confirmedEmployer) {
         firebase.database().ref('jobs/' + jobId + '/status').set('done');
         addToken(U.huid, 'qrt', 1);
         addToken(employerHuid, 'qrt', 0.1);
         T('🎉 Заказ завершён! Начислены QRT');
-        setTimeout(function() {
+        setTimeout(function(){
           openRating(jobId, employerHuid, j.employer, 'worker');
         }, 800);
+      } else {
+        // Слушаем пока работодатель подтвердит
+        firebase.database().ref('jobs/' + jobId + '/confirmedEmployer').on('value', function(s) {
+          if (s.val() === true) {
+            firebase.database().ref('jobs/' + jobId + '/confirmedEmployer').off();
+            firebase.database().ref('jobs/' + jobId).once('value', function(snap2) {
+              var j2 = snap2.val(); if (!j2) return;
+              firebase.database().ref('jobs/' + jobId + '/status').set('done');
+              addToken(U.huid, 'qrt', 1);
+              addToken(employerHuid, 'qrt', 0.1);
+              T('🎉 Заказ завершён! Начислены QRT');
+              setTimeout(function(){
+                openRating(jobId, employerHuid, j2.employer, 'worker');
+              }, 800);
+            });
+          }
+        });
       }
     });
   });
