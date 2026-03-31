@@ -423,35 +423,33 @@ function submitRating() {
   var targetRole = el('rating-target-role') ? el('rating-target-role').value : '';
   var review = el('rating-review').value.trim();
   var key = targetHuid.replace(/[^a-zA-Z0-9]/g,'');
-  firebase.database().ref('ratings/' + key).push({
+firebase.database().ref('ratings/' + key).push({
     rating: selectedRating, review: review,
     from: U.name, fromHuid: U.huid,
     jobId: jobId, time: Date.now()
   }).then(function() {
-   if (targetRole === 'worker') {
-  if (selectedRating === 5) {
-    addToken(targetHuid, 'qrt', 3);
-    addToken(targetHuid, 'qrnc', 0.5);
-    T('⭐ Оценка отправлена! +3 QRT +0.5 QRNC');
-  } else if (selectedRating === 4) {
-    addToken(targetHuid, 'qrt', 2);
-    addToken(targetHuid, 'qrnc', 0.2);
-    T('⭐ Оценка отправлена! +2 QRT +0.2 QRNC');
-  } else if (selectedRating === 3) {
-    addToken(targetHuid, 'qrt', 1);
-    addToken(targetHuid, 'qrnc', 0.1);
-    T('⭐ Оценка отправлена! +1 QRT +0.1 QRNC');
-  } else {
-    T('⭐ Оценка отправлена!');
-  }
-} else {
-  T('⭐ Оценка отправлена!');
-}
+    if (targetRole === 'worker') {
+      if (selectedRating === 5) {
+        addToken(targetHuid, 'qrt', 3);
+        addToken(targetHuid, 'qrnc', 0.5);
+        T('⭐ Оценка отправлена! +3 QRT +0.5 QRNC');
+      } else if (selectedRating === 4) {
+        addToken(targetHuid, 'qrt', 2);
+        addToken(targetHuid, 'qrnc', 0.2);
+        T('⭐ Оценка отправлена! +2 QRT +0.2 QRNC');
+      } else if (selectedRating === 3) {
+        addToken(targetHuid, 'qrt', 1);
+        addToken(targetHuid, 'qrnc', 0.1);
+        T('⭐ Оценка отправлена! +1 QRT +0.1 QRNC');
+      } else {
+        T('⭐ Оценка отправлена!');
+      }
+    } else {
+      T('⭐ Оценка отправлена!');
     }
     el('rating-panel').style.display = 'none';
   });
 }
-
 function closeRating() { el('rating-panel').style.display = 'none'; }
 
 // ФИЛЬТР
