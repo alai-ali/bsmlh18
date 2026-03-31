@@ -190,9 +190,46 @@ function postJob() {
   showJobTab('vacancies');
 }
 
-// ── КОШЕЛЁК ──
 function loadWalletBalance() {
   if (!U.huid) return;
+  
+  var addrEl = el('wal-addr');
+  if (addrEl) addrEl.innerText = U.huid;
+
+  if (!window.firebase || !firebase.apps || !firebase.apps.length) {
+    setTimeout(loadWalletBalance, 1000);
+    return;
+  }
+
+  var key = U.huid.replace(/[^a-zA-Z0-9]/g, '');
+  
+  firebase.database().ref('tokens/' + key).on('value', function(snap) {
+    var data = snap.val() || {};
+    
+    var qrt  = data.qrt  || 0;
+    var qrnc = data.qrnc || 0;
+
+    document.querySelectorAll('#wal-qrt').forEach(function(e) {
+      e.innerText = qrt.toFixed(3);
+    });
+    document.querySelectorAll('#wal-qrnc').forEach(function(e) {
+      e.innerText = qrnc.toFixed(3);
+    });
+
+    var balEl = document.querySelector('.wallet-balance');
+    if (balEl) balEl.innerText = '0.00';
+
+    // ✅ СЮДА ВСТАВИТЬ — после строки с balEl:
+    var bsmlhEl = el('wal-bsmlh');
+    if (!data.bsmlh) {
+      firebase.database().ref('tokens/' + key + '/bsmlh').set(1);
+      if (bsmlhEl) bsmlhEl.innerText = '1';
+    } else {
+      if (bsmlhEl) bsmlhEl.innerText = data.bsmlh;
+    }
+
+  });
+}
   
   // Показываем адрес кошелька
   var addrEl = el('wal-addr');
