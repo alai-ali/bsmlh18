@@ -92,7 +92,7 @@ function initFirebase() {
     appId: '1:41774666354:web:e200d57a0bab89e26be8eb'
   });
   firebase.appCheck().activate(
-    '6LdHpJ8sAAAAAIh9DUbn3AN7dTFmPQWO2iY604JX',
+    '6LdAw6AsAAAAAPpIARwm1C0pl3-hToekBX2NxLFv',
     true
   );
   console.log('Firebase готов');
