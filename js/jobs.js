@@ -78,21 +78,36 @@ function postNewJob() {
   if (!title) { T('Введите название заказа'); return; }
   if (!desc) { T('Опишите задание'); return; }
   if (!price) { T('Укажите оплату'); return; }
-  var job = {
-    id: Date.now().toString(36).toUpperCase(),
-    title: title, desc: desc, price: price,
-    location: location || 'Удалённо',
-    category: selectedCategory,
-    employer: U.name, employerHuid: U.huid,
-    status: 'open', createdAt: Date.now(), applicants: {}
-  };
-  firebase.database().ref('jobs/' + job.id).set(job).then(function() {
-    T('✅ Заказ опубликован!');
-    el('jobs-post-form').style.display = 'none';
-    el('jobs-employer-home').style.display = 'block';
-    loadMyJobs();
-    clearPostForm();
-  }).catch(function(e){ T('Ошибка: ' + e.message); });
+
+  function publishJob(lat, lng) {
+    var job = {
+      id: Date.now().toString(36).toUpperCase(),
+      title: title, desc: desc, price: price,
+      location: location || 'Удалённо',
+      category: selectedCategory,
+      employer: U.name, employerHuid: U.huid,
+      status: 'open', createdAt: Date.now(), applicants: {},
+      lat: lat || null, lng: lng || null
+    };
+    firebase.database().ref('jobs/' + job.id).set(job).then(function() {
+      T('✅ Заказ опубликован!');
+      el('jobs-post-form').style.display = 'none';
+      el('jobs-employer-home').style.display = 'block';
+      loadMyJobs();
+      clearPostForm();
+    }).catch(function(e){ T('Ошибка: ' + e.message); });
+  }
+
+  if (navigator.geolocation) {
+    T('Определяем местоположение...');
+    navigator.geolocation.getCurrentPosition(
+      function(pos) { publishJob(pos.coords.latitude, pos.coords.longitude); },
+      function() { publishJob(null, null); },
+      { timeout: 5000 }
+    );
+  } else {
+    publishJob(null, null);
+  }
 }
 
 function clearPostForm() {
@@ -122,6 +137,7 @@ function loadMyJobs() {
 
 // ТОКЕНЫ
 function addToken(userHuid, type, amount) {
+  if (!userHuid) return;
   var key = userHuid.replace(/[^a-zA-Z0-9]/g,'');
   var ref = firebase.database().ref('tokens/' + key + '/' + type);
   ref.once('value', function(snap) {
@@ -146,7 +162,6 @@ function completeJobEmployer(jobId, workerHuid) {
           openRating(jobId, workerHuid, j.selectedWorkerName || 'Работник', 'employer');
         }, 800);
       } else {
-        // Слушаем пока работник подтвердит
         firebase.database().ref('jobs/' + jobId + '/confirmedWorker').on('value', function(s) {
           if (s.val() === true) {
             firebase.database().ref('jobs/' + jobId + '/confirmedWorker').off();
@@ -156,6 +171,7 @@ function completeJobEmployer(jobId, workerHuid) {
               addToken(workerHuid, 'qrt', 1);
               addToken(U.huid, 'qrt', 0.1);
               T('🎉 Заказ завершён! Начислены QRT');
+              if (typeof loadWorkersOnMap === 'function') loadWorkersOnMap();
               setTimeout(function(){
                 openRating(jobId, workerHuid, j2.selectedWorkerName || 'Работник', 'employer');
               }, 800);
@@ -179,11 +195,11 @@ function completeJobWorker(jobId, employerHuid) {
         addToken(U.huid, 'qrt', 1);
         addToken(employerHuid, 'qrt', 0.1);
         T('🎉 Заказ завершён! Начислены QRT');
+        if (typeof loadWorkersOnMap === 'function') loadWorkersOnMap();
         setTimeout(function(){
           openRating(jobId, employerHuid, j.employer, 'worker');
         }, 800);
       } else {
-        // Слушаем пока работодатель подтвердит
         firebase.database().ref('jobs/' + jobId + '/confirmedEmployer').on('value', function(s) {
           if (s.val() === true) {
             firebase.database().ref('jobs/' + jobId + '/confirmedEmployer').off();
@@ -193,6 +209,7 @@ function completeJobWorker(jobId, employerHuid) {
               addToken(U.huid, 'qrt', 1);
               addToken(employerHuid, 'qrt', 0.1);
               T('🎉 Заказ завершён! Начислены QRT');
+              if (typeof loadWorkersOnMap === 'function') loadWorkersOnMap();
               setTimeout(function(){
                 openRating(jobId, employerHuid, j2.employer, 'worker');
               }, 800);
@@ -223,6 +240,7 @@ function loadJobs() {
       var btn = '';
       if (j.status === 'done') {
         btn = '<div style="margin-top:10px;font-size:13px;color:#059669;text-align:center;padding:8px;background:#D1FAE5;border-radius:8px;font-weight:600;">✅ Заказ завершён</div>';
+        if (typeof loadWorkersOnMap === 'function') loadWorkersOnMap();
       } else if (j.status === 'closed') {
         if (isSelected) {
           var confirmBtn = j.confirmedWorker
@@ -423,7 +441,7 @@ function submitRating() {
   var targetRole = el('rating-target-role') ? el('rating-target-role').value : '';
   var review = el('rating-review').value.trim();
   var key = targetHuid.replace(/[^a-zA-Z0-9]/g,'');
-firebase.database().ref('ratings/' + key).push({
+  firebase.database().ref('ratings/' + key).push({
     rating: selectedRating, review: review,
     from: U.name, fromHuid: U.huid,
     jobId: jobId, time: Date.now()
@@ -450,6 +468,7 @@ firebase.database().ref('ratings/' + key).push({
     el('rating-panel').style.display = 'none';
   });
 }
+
 function closeRating() { el('rating-panel').style.display = 'none'; }
 
 // ФИЛЬТР
